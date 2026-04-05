@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cancellation Flow — Builder Prototype</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;background:#111110;color:#e8e5de;font-size:13px;}
+.builder{display:grid;grid-template-columns:240px 1fr 308px;height:100vh;}
+
+/* LEFT */
+.left{background:#1a1917;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;overflow:hidden;}
+.ltabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.06);padding:0 8px;flex-shrink:0;}
+.ltab{padding:10px 12px;font-size:13px;color:#888780;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.ltab.on{color:#e8e5de;border-bottom-color:#e8e5de;}
+.slist{flex:1;overflow-y:auto;padding:6px 0;}
+.slist::-webkit-scrollbar{width:3px;}.slist::-webkit-scrollbar-thumb{background:#333;}
+.grphdr{display:flex;align-items:center;gap:5px;padding:8px 12px 3px;font-size:11px;color:#666;font-weight:500;user-select:none;margin-top:6px;text-transform:uppercase;letter-spacing:.04em;}
+.nbadge{font-size:9px;background:#1a3a2a;color:#4ade80;padding:1px 5px;border-radius:3px;margin-left:3px;text-transform:none;letter-spacing:0;}
+.sit{display:flex;align-items:center;gap:9px;padding:5px 9px;cursor:pointer;border-radius:6px;margin:1px 5px;}
+.sit:hover{background:rgba(255,255,255,0.04);}
+.sit.on{background:rgba(255,255,255,0.09);}
+.sthumb{width:30px;height:48px;background:#252422;border-radius:4px;border:1px solid rgba(255,255,255,0.07);flex-shrink:0;display:flex;flex-direction:column;justify-content:center;padding:4px;gap:2px;}
+.tl{height:2px;background:rgba(255,255,255,0.14);border-radius:1px;}
+.tl.w8{width:80%;}.tl.w6{width:60%;}.tl.w5{width:50%;}.tl.w4{width:40%;}
+.tl.tb{height:4px;background:rgba(255,255,255,0.24);border-radius:2px;margin-top:3px;}
+.sinfo{flex:1;min-width:0;}
+.sn{font-size:10px;color:#444;line-height:1.2;}
+.sl{font-size:11.5px;color:#c4c1b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* CENTER */
+.center{background:#161614;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18px;overflow:hidden;}
+.hint{background:#1c2a1a;border:1px solid #2d4a1a;border-radius:8px;padding:6px 13px;font-size:11px;color:#86efac;margin-bottom:14px;display:flex;align-items:center;gap:7px;max-width:360px;width:90%;}
+
+/* PHONE */
+.phone-wrap{width:282px;height:542px;background:#111;border-radius:42px;padding:11px;box-shadow:0 0 0 1px rgba(255,255,255,0.09),0 20px 50px rgba(0,0,0,0.7);flex-shrink:0;position:relative;}
+.phone-notch{width:70px;height:17px;background:#111;border-radius:0 0 11px 11px;position:absolute;top:11px;left:50%;transform:translateX(-50%);z-index:10;}
+.phone-screen{width:100%;height:100%;background:white;border-radius:31px;overflow:hidden;}
+.phone-inner{padding:26px 13px 14px;height:100%;overflow-y:auto;scrollbar-width:none;position:relative;}
+.phone-inner::-webkit-scrollbar{display:none;}
+
+/* PHONE ELEMENTS */
+.back{position:absolute;top:9px;left:13px;color:#444;font-size:17px;}
+.ptitle{text-align:center;font-size:14px;font-weight:700;color:#111;margin:16px 0 12px;line-height:1.35;}
+.popt{display:flex;align-items:center;gap:9px;padding:10px 11px;background:#f2f1ee;border-radius:11px;margin-bottom:6px;font-size:12px;color:#222;cursor:pointer;}
+.popt .em{font-size:14px;}
+
+/* buttons */
+.pbtn{display:block;width:100%;padding:12px;border:none;border-radius:12px;font-size:12px;font-weight:500;cursor:pointer;margin-top:7px;text-align:center;transition:all .12s;border:2px solid transparent;}
+.pbtn.primary{background:#2d6a4f;color:white;}
+.pbtn.primary:hover{background:#317856;}
+.pbtn.secondary{background:#eeece8;color:#555;}
+.pbtn.secondary:hover{background:#e5e3de;}
+.pbtn.deeplink{background:#111;color:white;}
+.pbtn.tryagain{background:#111;color:white;}
+.pbtn.sel{border-color:#818cf8 !important;box-shadow:0 0 0 1px #818cf8;}
+
+/* conditional button wrapper */
+.cond-btn-wrap{position:relative;margin-top:8px;cursor:pointer;border-radius:12px;}
+.cond-btn-wrap .pbtn{margin-top:0;}
+.ctag{position:absolute;top:-8px;left:9px;font-size:9px;padding:1px 7px;border-radius:3px;font-family:monospace;font-weight:600;white-space:nowrap;z-index:2;}
+.ctag.new{background:#1a3a2a;color:#4ade80;}
+.ctag.paid{background:#EAF3DE;color:#27500A;}
+
+.cond-btn-wrap.sel .pbtn{border-color:#818cf8;box-shadow:0 0 0 1px #818cf8;}
+
+/* offer content */
+.oem{text-align:center;font-size:42px;margin:14px 0 9px;}
+.otitle{text-align:center;font-size:13.5px;font-weight:700;color:#111;line-height:1.3;margin-bottom:7px;}
+.otitle .hi{color:#2d6a4f;}
+.obody{text-align:center;font-size:11.5px;color:#666;margin-bottom:13px;line-height:1.5;}
+.odate{text-align:center;font-size:12px;color:#2d6a4f;font-weight:600;margin-bottom:9px;}
+
+/* RIGHT */
+.right{background:#1a1917;border-left:1px solid rgba(255,255,255,0.06);overflow-y:auto;}
+.right::-webkit-scrollbar{width:3px;}.right::-webkit-scrollbar-thumb{background:#333;}
+.rtab-bar{display:flex;border-bottom:1px solid rgba(255,255,255,0.06);padding:0 14px;position:sticky;top:0;background:#1a1917;z-index:10;}
+.rtab{padding:11px 8px;font-size:13px;color:#e8e5de;border-bottom:2px solid #e8e5de;}
+.rbody{padding:14px;}
+
+.frow{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);gap:8px;}
+.flbl{color:#888780;font-size:12px;flex-shrink:0;padding-top:1px;}
+.fval{background:#252422;border:1px solid rgba(255,255,255,0.09);border-radius:6px;padding:5px 9px;font-size:12px;color:#c8c5bc;display:flex;align-items:center;gap:5px;min-width:120px;justify-content:space-between;cursor:default;}
+.shdr{font-size:12px;font-weight:600;color:#e8e5de;margin:14px 0 7px;display:flex;align-items:center;gap:5px;}
+.chev{color:#555;}
+.vis-row{display:flex;background:#252422;border-radius:6px;border:1px solid rgba(255,255,255,0.09);overflow:hidden;}
+.vo{padding:5px 9px;font-size:11px;color:#555;cursor:pointer;}
+.vo.on{background:#2d2c2a;color:#e8e5de;}
+.act-val{border:1.5px solid #4a9eff;background:#1a2535;color:#4a9eff;border-radius:6px;padding:5px 9px;font-size:12px;display:flex;align-items:center;justify-content:space-between;min-width:150px;}
+
+/* condition block */
+.csec{margin-top:12px;}
+.cif{font-size:12px;color:#888780;margin-bottom:7px;}
+.cblock{background:#222120;border-radius:8px;padding:10px;margin-bottom:7px;}
+.cpill{display:flex;align-items:center;justify-content:space-between;background:#1a3a2a;border:1px solid #2d6b4a;border-radius:6px;padding:6px 10px;font-size:12px;color:#86efac;margin-bottom:8px;}
+.npb{font-size:9px;background:#2d6b4a;color:#86efac;padding:1px 5px;border-radius:3px;margin-left:5px;}
+.cblist{display:flex;flex-direction:column;gap:2px;}
+.cbi{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:12px;}
+.cbi.dim{color:#3a3936;}
+.cbi.bright{color:#c8c5bc;}
+.cb{width:13px;height:13px;border-radius:3px;border:1px solid rgba(255,255,255,0.18);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.cb.on{background:#2d6a4f;border-color:#2d6a4f;}
+.cb.on::after{content:'✓';color:white;font-size:8px;}
+.addcond{color:#4a9eff;font-size:12px;cursor:pointer;padding:7px 0 2px;display:flex;align-items:center;gap:5px;}
+
+/* info/alert block */
+.iblock{background:#1a2535;border:1px solid #2d4a6b;border-left:3px solid #4a9eff;border-radius:6px;padding:9px 11px;margin:10px 0;font-size:11px;color:#93c5fd;line-height:1.5;}
+.ibtitle{font-weight:600;font-size:12px;margin-bottom:3px;display:flex;align-items:center;gap:5px;}
+.nb2{font-size:9px;background:#1a3a2a;color:#4ade80;padding:1px 5px;border-radius:3px;}
+
+.hintbox{background:#222120;border-radius:6px;padding:8px 10px;font-size:11px;color:#555;line-height:1.5;margin-top:8px;}
+.hc{background:#1a1917;padding:1px 4px;border-radius:3px;color:#93c5fd;font-family:monospace;font-size:10px;}
+
+.empty-r{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:#3a3936;font-size:12px;text-align:center;gap:8px;}
+</style>
+</head>
+<body>
+<div class="builder">
+
+<!-- LEFT -->
+<div class="left">
+  <div class="ltabs"><div class="ltab on">Screens</div><div class="ltab">Elements</div></div>
+  <div class="slist" id="slist"></div>
+</div>
+
+<!-- CENTER -->
+<div class="center">
+  <div class="hint">💡 Click a screen in the left panel to navigate · Click any button on the phone to inspect it</div>
+  <div class="phone-wrap">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="phone-inner" id="phone"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+  <div class="rtab-bar"><div class="rtab">Element</div></div>
+  <div class="rbody" id="rpanel"></div>
+</div>
+
+</div>
+<script>
+let S = { screen:'survey', el:null };
+
+// ── SCREENS ──
+const GROUPS = [
+  { name:'Cancellation Survey', screens:[
+    {id:'survey', n:'0', label:'Survey'}
+  ]},
+  { name:'Paid Flow', screens:[
+    {id:'gift-paid',  n:'1',  label:'Gift — Free Period'},
+    {id:'gift-done',  n:'2',  label:'Gift Done'},
+    {id:'gift-error', n:'3',  label:'Gift Error'},
+    {id:'pause',      n:'4',  label:'Pause Subscription'},
+    {id:'pause-done', n:'5',  label:'Pause Done'},
+    {id:'pause-error',n:'6',  label:'Pause Error'},
+    {id:'discount',   n:'7',  label:'Discount'},
+    {id:'disc-done',  n:'8',  label:'Discount Done'},
+    {id:'disc-error', n:'9',  label:'Discount Error'},
+    {id:'cancel-done',n:'10', label:'Cancel Done'},
+    {id:'cancel-error',n:'11',label:'Cancel Error'},
+  ]},
+  { name:'Trial Flow', isNew:true, screens:[
+    {id:'extend',      n:'12', label:'Extend Trial'},
+    {id:'extend-done', n:'13', label:'Extend Done'},
+    {id:'extend-error',n:'14', label:'Extend Error'},
+    {id:'swap-trial',  n:'15', label:'Swap Plan (Trial)'},
+    {id:'swap-done',   n:'16', label:'Swap Done'},
+    {id:'swap-error',  n:'17', label:'Swap Error'},
+    {id:'trial-cancel',n:'18', label:'Trial Cancel Done'},
+  ]},
+  { name:'Edge Cases', isNew:true, screens:[
+    {id:'already-cancelled', n:'19', label:'Already Cancelled', isNew:true},
+    {id:'no-subscription',   n:'20', label:'No Subscription Found', isNew:true},
+  ]}
+];
+
+// ── LEFT ──
+function renderLeft(){
+  let h='';
+  GROUPS.forEach(g=>{
+    h+=`<div class="grphdr">▾ ${g.name}${g.isNew?'<span class="nbadge">NEW</span>':''}</div>`;
+    g.screens.forEach(s=>{
+      h+=`<div class="sit ${S.screen===s.id?'on':''}" onclick="goScreen('${s.id}')">
+        <div class="sthumb"><div class="tl w8"></div><div class="tl w6"></div><div class="tl w4"></div><div class="tl tb"></div></div>
+        <div class="sinfo"><div class="sn">${s.n}.</div><div class="sl">${s.label}${s.isNew?'<span class="nbadge" style="margin-left:3px;">NEW</span>':''}</div></div>
+      </div>`;
+    });
+  });
+  document.getElementById('slist').innerHTML=h;
+}
+
+// ── NAVIGATE ──
+function goScreen(id){
+  S.screen=id; S.el=null;
+  // auto-select primary el for screen
+  const primary = PRIMARY_EL[id];
+  if(primary) S.el = primary;
+  renderLeft(); renderPhone(); renderRight();
+}
+
+function selEl(id, ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  S.el = (S.el===id) ? null : id;
+  renderPhone(); renderRight();
+}
+
+// primary element to auto-show when screen is selected
+const PRIMARY_EL = {
+  'survey':       'btn-cont-paid',
+  'gift-paid':    'btn-gift-accept',
+  'pause':        'btn-pause-accept',
+  'discount':     'btn-disc-accept',
+  'extend':       'btn-ext-accept',
+  'swap-trial':   'btn-swap-accept',
+  'gift-done':    'btn-deeplink-gift',
+  'extend-done':  'btn-deeplink-ext',
+  'swap-done':    'btn-deeplink-swap',
+  'cancel-done':  'btn-deeplink-cancel',
+  'trial-cancel': 'btn-deeplink-tcancel',
+  'pause-done':   'btn-deeplink-pause',
+  'disc-done':    'btn-deeplink-disc',
+  'gift-error':   'btn-retry-gift',
+  'pause-error':  'btn-retry-pause',
+  'extend-error': 'btn-retry-ext',
+  'swap-error':   'btn-retry-swap',
+  'disc-error':   'btn-retry-disc',
+  'cancel-error': 'btn-retry-cancel',
+  'already-cancelled': 'btn-reactivate',
+  'no-subscription':   'btn-nosub-support',
+};
+
+function s(id){ return S.el===id?'sel':''; }
+
+// ── PHONE ──
+function renderPhone(){
+  const map = {
+    'survey': phoneSurvey,
+    'gift-paid': phoneGiftPaid,
+    'gift-done': ()=>phoneDone('🎉','Your free period is active',"You won't be charged for the next 3 months. We'll remind you before it ends.",'btn-deeplink-gift'),
+    'gift-error': ()=>phoneError('Something went wrong',"We couldn't apply your free period. Please try again.",'btn-retry-gift'),
+    'pause': phonePause,
+    'pause-done': ()=>phoneDone('😴','Your subscription is paused',"Billing is paused. Resume anytime — your progress is saved.",'btn-deeplink-pause'),
+    'pause-error': ()=>phoneError('Pause not applied','Please try again or contact support if the issue remains.','btn-retry-pause'),
+    'discount': phoneDiscount,
+    'disc-done': ()=>phoneDone('🎉','50% discount applied',"You'll pay less for the next 3 billing cycles. Same plan, lower price.",'btn-deeplink-disc'),
+    'disc-error': ()=>phoneError('Discount not applied','Please try again or contact our support team.','btn-retry-disc'),
+    'cancel-done': phoneCancelDone,
+    'cancel-error': ()=>phoneError('Failed to cancel subscription','Please try again or contact our support team.','btn-retry-cancel'),
+    'extend': phoneExtend,
+    'extend-done': ()=>phoneDone('⏳','Trial extended by 7 days',"7 more days, no charge. We'll remind you before your trial ends.",'btn-deeplink-ext'),
+    'extend-error': ()=>phoneError('Trial extension failed','Please try again or contact support.','btn-retry-ext'),
+    'swap-trial': phoneSwapTrial,
+    'swap-done': ()=>phoneDone('✅','Plan switched — trial continues',"You're on the starter plan now. Your trial continues until its original end date.",'btn-deeplink-swap'),
+    'swap-error': ()=>phoneError('Plan switch not applied','Please try again or contact support.','btn-retry-swap'),
+    'trial-cancel': phoneTrialCancel,
+    'already-cancelled': phoneAlreadyCancelled,
+    'no-subscription': phoneNoSub,
+  };
+  document.getElementById('phone').innerHTML = (map[S.screen]||phoneGeneric)();
+}
+
+function phoneSurvey(){
+  return `<div class="back">‹</div>
+    <div class="ptitle">Before you go —<br>what's making you leave?</div>
+    <div class="popt"><span class="em">💸</span>It's too expensive</div>
+    <div class="popt"><span class="em">😴</span>I'm not using it enough</div>
+    <div class="popt"><span class="em">☕</span>I need a break</div>
+    <div class="popt"><span class="em">😕</span>It didn't meet my expectations</div>
+    <div class="popt"><span class="em">🔄</span>I found something better</div>
+    <div class="popt"><span class="em">💬</span>Something else</div>
+
+    <div class="cond-btn-wrap ${s('btn-cont-paid')}" onclick="selEl('btn-cont-paid',event)" style="margin-top:10px;padding-top:10px;">
+      <div class="ctag new">Subscription Status: Active</div>
+      <button class="pbtn primary ${s('btn-cont-paid')}">Continue</button>
+    </div>
+    <div class="cond-btn-wrap ${s('btn-cont-trial')}" onclick="selEl('btn-cont-trial',event)" style="margin-top:14px;padding-top:10px;">
+      <div class="ctag new">Subscription Status: Trialing</div>
+      <button class="pbtn primary ${s('btn-cont-trial')}" style="background:#1e3f30;">Continue</button>
+    </div>
+    <div class="cond-btn-wrap ${s('btn-already-canc')}" onclick="selEl('btn-already-canc',event)" style="margin-top:14px;padding-top:10px;">
+      <div class="ctag new">Subscription Status: Cancelled</div>
+      <button class="pbtn secondary ${s('btn-already-canc')}">View cancellation status</button>
+    </div>
+    <div class="cond-btn-wrap ${s('btn-nosub')}" onclick="selEl('btn-nosub',event)" style="margin-top:14px;padding-top:10px;">
+      <div class="ctag new">Subscription Status: Not found</div>
+      <button class="pbtn secondary ${s('btn-nosub')}" style="background:#e0deda;color:#888;">No active subscription found</button>
+    </div>`;
+}
+
+function phoneGiftPaid(){
+  return `<div class="back">‹</div>
+    <div class="oem">🎁</div>
+    <div class="otitle">Stay on us — <span class="hi">3 months free</span></div>
+    <div class="obody">We'll extend your access at no charge. Same plan, nothing changes, zero cost for 90 days.</div>
+    <button class="pbtn primary ${s('btn-gift-accept')}" onclick="selEl('btn-gift-accept',event)">Claim my free period</button>
+    <button class="pbtn secondary ${s('btn-gift-decline')}" onclick="selEl('btn-gift-decline',event)">Cancel anyway</button>`;
+}
+
+function phonePause(){
+  return `<div class="back">‹</div>
+    <div class="oem">😴</div>
+    <div class="otitle">Take a break — <span class="hi">we'll hold your spot</span></div>
+    <div class="obody">Billing stops immediately. Resume anytime and pick up exactly where you left off.</div>
+    <button class="pbtn primary ${s('btn-pause-accept')}" onclick="selEl('btn-pause-accept',event)">Pause my subscription</button>
+    <button class="pbtn secondary ${s('btn-pause-decline')}" onclick="selEl('btn-pause-decline',event)">Cancel anyway</button>`;
+}
+
+function phoneDiscount(){
+  return `<div class="back">‹</div>
+    <div class="oem">🤩</div>
+    <div class="otitle">Stay for <span class="hi">50% off</span> — next 3 months</div>
+    <div class="obody">Same plan, half the price for 3 billing cycles. Discount applies automatically.</div>
+    <button class="pbtn primary ${s('btn-disc-accept')}" onclick="selEl('btn-disc-accept',event)">Apply my discount</button>
+    <button class="pbtn secondary ${s('btn-disc-decline')}" onclick="selEl('btn-disc-decline',event)">Cancel anyway</button>`;
+}
+
+function phoneCancelDone(){
+  return `<div class="oem" style="margin-top:28px;">😢</div>
+    <div class="otitle">Your subscription has been cancelled</div>
+    <div class="obody">You'll keep access until your current period ends. No further charges.</div>
+    <div class="odate">Access until: April 30, 2026</div>
+    <button class="pbtn deeplink ${s('btn-deeplink-cancel')}" onclick="selEl('btn-deeplink-cancel',event)">{{Deep link to app}}</button>`;
+}
+
+function phoneExtend(){
+  return `<div class="back">‹</div>
+    <div class="oem">⏳</div>
+    <div class="otitle">We'll add <span class="hi">7 more days</span> to your trial</div>
+    <div class="obody">No charge. More time to explore and decide. Your trial extends automatically.</div>
+    <button class="pbtn primary ${s('btn-ext-accept')}" onclick="selEl('btn-ext-accept',event)">Extend my trial</button>
+    <button class="pbtn secondary ${s('btn-ext-decline')}" onclick="selEl('btn-ext-decline',event)">Cancel anyway</button>`;
+}
+
+function phoneSwapTrial(){
+  return `<div class="back">‹</div>
+    <div class="oem">🔄</div>
+    <div class="otitle">Switch to a lighter plan — <span class="hi">trial stays</span></div>
+    <div class="obody">Move to the starter plan and your trial continues until its original end date. No charge today.</div>
+    <button class="pbtn primary ${s('btn-swap-accept')}" onclick="selEl('btn-swap-accept',event)">Switch my plan</button>
+    <button class="pbtn secondary ${s('btn-swap-decline')}" onclick="selEl('btn-swap-decline',event)">Cancel trial</button>`;
+}
+
+function phoneTrialCancel(){
+  return `<div class="oem" style="margin-top:28px;">😢</div>
+    <div class="otitle">Your trial has been cancelled</div>
+    <div class="obody">No charge. You can always start a new trial whenever you're ready to come back.</div>
+    <button class="pbtn deeplink ${s('btn-deeplink-tcancel')}" onclick="selEl('btn-deeplink-tcancel',event)">{{Deep link to app}}</button>`;
+}
+
+function phoneAlreadyCancelled(){
+  return `<div class="oem" style="margin-top:28px;">📅</div>
+    <div class="otitle">Your subscription is already scheduled to end</div>
+    <div class="odate">Access until: April 30, 2026</div>
+    <div class="obody">No further charges. Reactivate before your access expires to keep everything.</div>
+    <button class="pbtn primary ${s('btn-reactivate')}" onclick="selEl('btn-reactivate',event)">Reactivate my subscription</button>
+    <button class="pbtn secondary ${s('btn-close-canc')}" onclick="selEl('btn-close-canc',event)">Got it — close</button>`;
+}
+
+function phoneNoSub(){
+  return `<div class="oem" style="margin-top:28px;">🔍</div>
+    <div class="otitle">No active subscription found</div>
+    <div class="obody">There's no active or trialing subscription linked to your account. Contact support if this seems incorrect.</div>
+    <button class="pbtn primary ${s('btn-nosub-support')}" style="background:#555;" onclick="selEl('btn-nosub-support',event)">Contact support</button>`;
+}
+
+function phoneDone(em, title, body, dlBtn){
+  return `<div class="oem" style="margin-top:28px;">${em}</div>
+    <div class="otitle">${title}</div>
+    <div class="obody">${body}</div>
+    <button class="pbtn deeplink ${s(dlBtn)}" onclick="selEl('${dlBtn}',event)">{{Deep link to app}}</button>`;
+}
+
+function phoneError(title, body, retryBtn){
+  return `<div class="oem" style="margin-top:28px;">⚠️</div>
+    <div class="otitle">${title}</div>
+    <div class="obody">${body}</div>
+    <button class="pbtn tryagain ${s(retryBtn)}" onclick="selEl('${retryBtn}',event)">Try again</button>`;
+}
+
+function phoneGeneric(){
+  return `<div class="oem" style="margin-top:40px;">📱</div><div class="otitle">${S.screen}</div>`;
+}
+
+// ── RIGHT ──
+function renderRight(){
+  const p = document.getElementById('rpanel');
+  if(!S.el){ p.innerHTML=`<div class="empty-r"><div style="font-size:22px;opacity:.4;">👆</div><div>Click any button in the phone<br>to inspect its settings</div></div>`; return; }
+
+  const map = {
+    'btn-cont-paid':    ()=>rCondBtn('el_continue_paid','Navigate','Gift — Free Period','Active','Shown only when the subscription is active. Leads to the paid retention flow: Gift → Pause → Discount.'),
+    'btn-cont-trial':   ()=>rCondBtn('el_continue_trial','Navigate','Extend Trial','Trialing','Shown only when the subscription is trialing. Leads to the trial retention flow: Extend Trial → Swap Plan.'),
+    'btn-already-canc': ()=>rCondBtn('el_btn_cancelled','Navigate','Already Cancelled','Cancelled','Shown when cancel_at_period_end = true. No retention offers — shows cancellation status only.'),
+    'btn-nosub':        ()=>rCondBtn('el_btn_nosub','Navigate','No Subscription Found','Not found','Shown when no active or trialing subscription is found for the profile ID.'),
+
+    'btn-gift-accept':  ()=>rActionBtn('el_gift_accept','Gift Free Period','gift-done','gift-error','Month','3','For trialing subscriptions, this action extends trial_end via the PSP adapter, not the billing period.'),
+    'btn-gift-decline': ()=>rNavOnly('el_gift_decline','Pause Subscription','Cancel anyway — move to next offer (Pause)'),
+    'btn-pause-accept': ()=>rPauseBtn(),
+    'btn-pause-decline':()=>rNavOnly('el_pause_decline','Discount','Cancel anyway — move to next offer (Discount)'),
+    'btn-disc-accept':  ()=>rActionBtn('el_disc_accept','Swap Subscription','disc-done','disc-error',null,null,null),
+    'btn-disc-decline': ()=>rNavOnly('el_disc_decline','Cancel Done','Cancel anyway — process cancellation'),
+    'btn-ext-accept':   ()=>rActionBtn('el_ext_accept','Gift Free Period','extend-done','extend-error','Day','7','Extends trial_end via PSP adapter. On Stripe: updates trial_end timestamp. On Paddle: updates next_billed_at. On Solidgate: updates trial_end_date.'),
+    'btn-ext-decline':  ()=>rNavOnly('el_ext_decline','Swap Plan (Trial)','Cancel anyway — offer plan swap as second option'),
+    'btn-swap-accept':  ()=>rActionBtn('el_swap_accept','Swap Subscription','swap-done','swap-error',null,null,'On Solidgate, uses update_subscription with new_product_id + trial_end_date: immediate to normalize behavior with Stripe/Paddle.'),
+    'btn-swap-decline': ()=>rNavOnly('el_swap_decline','Trial Cancel Done','Cancel trial — process cancellation'),
+    'btn-reactivate':   ()=>rNavOnly('el_reactivate','Survey','Navigate back to survey (reactivation managed by client app via webhook)'),
+    'btn-close-canc':   ()=>rNavOnly('el_close_canc','(close)','Close funnel — no action taken'),
+    'btn-nosub-support':()=>rDeeplinkBtn('el_nosub_support','Contact support — external URL'),
+  };
+
+  const deeplinks = ['btn-deeplink-gift','btn-deeplink-pause','btn-deeplink-disc','btn-deeplink-cancel','btn-deeplink-tcancel','btn-deeplink-ext','btn-deeplink-swap'];
+  if(deeplinks.includes(S.el)){
+    p.innerHTML = rDeeplinkBtn(S.el, '{{Input deep link for the button}}'); return;
+  }
+
+  const retries = {'btn-retry-gift':'gift-paid','btn-retry-pause':'pause','btn-retry-ext':'extend','btn-retry-swap':'swap-trial','btn-retry-disc':'discount','btn-retry-cancel':'cancel-done'};
+  if(retries[S.el]){
+    p.innerHTML = rRetryBtn(S.el, retries[S.el]); return;
+  }
+
+  p.innerHTML = (map[S.el]||rGeneric)();
+}
+
+function condBlock(status){
+  const all=['Active','Trialing','Paused','Cancelled','Not found'];
+  return `<div class="csec">
+    <div class="cif">If</div>
+    <div class="cblock">
+      <div class="cpill">Subscription Status <span class="npb">NEW</span> <span style="opacity:.4;">▾</span></div>
+      <div style="margin-bottom:8px;"><div class="fval" style="min-width:70px;font-size:11px;display:inline-flex;">one of <span style="opacity:.4;margin-left:6px;">▾</span></div></div>
+      <div class="cblist">
+        ${all.map(s=>`<div class="cbi ${s===status?'bright':'dim'}">
+          <div class="cb ${s===status?'on':''}"></div><span>${s}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="addcond">+ Add condition</div>
+  </div>`;
+}
+
+function rCondBtn(id, action, dest, status, hint){
+  return `<div class="frow"><span class="flbl">ID</span><span class="fval">${id}</span></div>
+    <div class="frow"><span class="flbl">Visible</span><div class="vis-row"><div class="vo">Yes</div><div class="vo on">Conditional</div><div class="vo">No</div></div></div>
+    ${condBlock(status)}
+    <div class="shdr">On Press <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Action</span><span class="fval">Navigate <span style="opacity:.4;">▾</span></span></div>
+    <div class="frow"><span class="flbl">Destination</span><span class="fval" style="font-size:11px;">${dest} <span style="opacity:.4;">▾</span></span></div>
+    <div class="hintbox">${hint}</div>`;
+}
+
+function rActionBtn(id, action, success, fail, interval, value, note){
+  return `<div class="frow"><span class="flbl">ID</span><span class="fval">${id}</span></div>
+    <div class="frow"><span class="flbl">Visible</span><div class="vis-row"><div class="vo on">Yes</div><div class="vo">Conditional</div><div class="vo">No</div></div></div>
+    <div class="shdr">On Press <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Action</span><div class="act-val">${action} <span style="opacity:.4;">▾</span></div></div>
+    ${interval?`<div class="shdr" style="margin-top:6px;">Gift Period <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Interval</span><span class="fval">${interval} <span style="opacity:.4;">▾</span></span></div>
+    <div class="frow"><span class="flbl">Value</span><span class="fval">${value}</span></div>`:''}
+    ${action==='Pause Subscription'?`<div class="iblock"><div class="ibtitle">ⓘ Stripe trialing subscriptions <span class="nb2">NOTE</span></div>Stripe does not support pausing trialing subscriptions. If a trialing Stripe user reaches this screen, the Fail Action triggers. Route trial users to Extend Trial using conditional visibility on Continue in Survey.</div>`:''}
+    ${note?`<div class="hintbox">${note}</div>`:''}
+    <div class="shdr">Success Action <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Action</span><span class="fval">Navigate <span style="opacity:.4;">▾</span></span></div>
+    <div class="frow"><span class="flbl">Destination</span><span class="fval" style="font-size:11px;">${success} <span style="opacity:.4;">▾</span></span></div>
+    <div class="shdr">Fail Action <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Action</span><span class="fval">Navigate <span style="opacity:.4;">▾</span></span></div>
+    <div class="frow"><span class="flbl">Destination</span><span class="fval" style="font-size:11px;">${fail} <span style="opacity:.4;">▾</span></span></div>`;
+}
+
+function rPauseBtn(){
+  return rActionBtn('el_pause_accept','Pause Subscription','pause-done','pause-error',null,null,null);
+}
+
+function rNavOnly(id, dest, note){
+  return `<div class="frow"><span class="flbl">ID</span><span class="fval">${id}</span></div>
+    <div class="frow"><span class="flbl">Visible</span><div class="vis-row"><div class="vo on">Yes</div><div class="vo">Conditional</div><div class="vo">No</div></div></div>
+    <div class="shdr">On Press <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Action</span><span class="fval">Navigate <span style="opacity:.4;">▾</span></span></div>
+    <div class="frow"><span class="flbl">Destination</span><span class="fval" style="font-size:11px;">${dest} <span style="opacity:.4;">▾</span></span></div>
+    ${note?`<div class="hintbox">${note}</div>`:''}`;
+}
+
+function rDeeplinkBtn(id, label){
+  return `<div class="frow"><span class="flbl">ID</span><span class="fval">${id}</span></div>
+    <div class="frow"><span class="flbl">Visible</span><div class="vis-row"><div class="vo on">Yes</div><div class="vo">Conditional</div><div class="vo">No</div></div></div>
+    <div class="shdr">On Press <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Action</span><div class="act-val">Go to external link <span style="opacity:.4;">▾</span></div></div>
+    <div class="frow"><span class="flbl">URL</span><span class="fval" style="font-size:10px;min-width:0;">{{deep_link_url}}</span></div>
+    <div class="hintbox">Deep link back to the client app. The client inputs the URL when setting up the funnel. Typically routes to the app's home screen or subscription management screen.</div>`;
+}
+
+function rRetryBtn(id, dest){
+  return `<div class="frow"><span class="flbl">ID</span><span class="fval">${id}</span></div>
+    <div class="frow"><span class="flbl">Visible</span><div class="vis-row"><div class="vo on">Yes</div><div class="vo">Conditional</div><div class="vo">No</div></div></div>
+    <div class="shdr">On Press <span class="chev">▾</span></div>
+    <div class="frow"><span class="flbl">Action</span><span class="fval">Navigate <span style="opacity:.4;">▾</span></span></div>
+    <div class="frow"><span class="flbl">Destination</span><span class="fval" style="font-size:11px;">${dest} <span style="opacity:.4;">▾</span></span></div>
+    <div class="hintbox">Error screen retry — navigates back to the offer screen so the user can attempt the action again.</div>`;
+}
+
+function rGeneric(){
+  return `<div class="frow"><span class="flbl">ID</span><span class="fval">${S.el}</span></div>
+    <div class="frow"><span class="flbl">Visible</span><div class="vis-row"><div class="vo on">Yes</div><div class="vo">Conditional</div><div class="vo">No</div></div></div>`;
+}
+
+// ── INIT ──
+renderLeft(); renderPhone(); renderRight();
+</script>
+</body>
+</html>
